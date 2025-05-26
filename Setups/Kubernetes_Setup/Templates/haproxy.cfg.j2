@@ -1,0 +1,25 @@
+global
+    log /dev/log    local0
+    log /dev/log    local1 notice
+    daemon
+    maxconn 2048
+
+defaults
+    log     global
+    mode    tcp
+    option  tcplog
+    option  dontlognull
+    timeout connect 10s
+    timeout client  1m
+    timeout server  1m
+
+frontend kubernetes-api
+    bind *:{{ haproxy_frontend_port }}
+    default_backend kubernetes-masters
+
+backend kubernetes-masters
+    balance roundrobin
+    option tcp-check
+    {% for node in haproxy_backends %}
+    server {{ node.name }} {{ node.ip }}:{{ haproxy_backend_port }} check fall 3 rise 2
+    {% endfor %}

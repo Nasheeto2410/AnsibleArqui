@@ -1,0 +1,14 @@
+[main_control_plane]
+{% for ip in main_control_plane %}
+k8s-control-plane-1 ansible_host={{ ip }}
+{% endfor %}
+
+[control_plane]
+{% for ip in control_planes %}
+k8s-control-plane-{{ loop.index + 1 }} ansible_host={{ ip }}
+{% endfor %}
+
+[workers]
+{% for ip in workers %}
+k8s-worker-node{{ loop.index }} ansible_host={{ ip }}
+{% endfor %}

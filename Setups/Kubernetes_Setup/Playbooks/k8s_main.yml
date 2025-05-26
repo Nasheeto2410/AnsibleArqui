@@ -1,0 +1,6 @@
+---
+- name: Set up Kubernetes dependencies
+  import_playbook: k8s_dependencies_setup.yml
+
+- name: Build Kubernetes environment
+  import_playbook: k8s_build_setup.yml

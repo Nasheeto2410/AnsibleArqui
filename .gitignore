@@ -1,0 +1,7 @@
+secrets*.yml
+*.ini
+
+
+# Network Setup files
+/Setups/Network_Setup/data/*.yml
+/Setups/Network_Setup/vars/*.yml

@@ -1,0 +1,229 @@
+---
+- name: Configure HAProxy and Keepalived for Kubernetes HA
+  hosts: main_control_plane:control_plane
+  become: true
+  gather_facts: yes
+  vars_files:
+      - secrets_k8s.yml
+  tasks:
+      - name: Set full list of control planes
+        set_fact:
+            all_control_planes: "{{ groups['main_control_plane'] + groups['control_plane'] }}"
+
+      - name: Install HAProxy and Keepalived
+        apt:
+            name: "{{ item }}"
+            state: present
+            update_cache: yes
+        loop:
+            - haproxy
+            - keepalived
+
+      - name: Backup original haproxy.cfg
+        copy:
+            src: /etc/haproxy/haproxy.cfg
+            dest: /etc/haproxy/haproxy.cfg.bak
+            remote_src: yes
+            force: no
+
+      - name: Build backend server list for HAProxy
+        set_fact:
+            haproxy_backends: >-
+                {{
+                  haproxy_backends | default([]) +
+                  [ {'name': item, 'ip': hostvars[item]['ansible_host']} ]
+                }}
+        loop: "{{ all_control_planes }}"
+
+      - name: Deploy HAProxy config
+        template:
+            src: ../Templates/haproxy.cfg.j2
+            dest: /etc/haproxy/haproxy.cfg
+            owner: root
+            group: root
+            mode: "0644"
+            backup: yes
+
+      - name: Set Keepalived state and priority per host
+        set_fact:
+            keepalived_state: >-
+                {{ 'MASTER' if inventory_hostname == groups['main_control_plane'][0] else 'BACKUP' }}
+            keepalived_priority: >-
+                {% if inventory_hostname == groups['main_control_plane'][0] %}
+                  {{ master_priority }}
+                {% else %}
+                  {{ base_backup_priority - (groups['control_plane'].index(inventory_hostname) if inventory_hostname in groups['control_plane'] else 0) }}
+                {% endif %}
+
+      - name: Deploy Keepalived config
+        template:
+            src: ../Templates/keepalived.cfg.j2
+            dest: /etc/keepalived/keepalived.conf
+            owner: root
+            group: root
+            mode: "0644"
+            backup: yes
+
+      - name: Enable and restart HAProxy
+        systemd:
+            name: haproxy
+            enabled: yes
+            state: restarted
+
+      - name: Enable and restart Keepalived
+        systemd:
+            name: keepalived
+            enabled: yes
+            state: restarted
+
+- name: Kubernetes Control Plane Initialization
+  hosts: main_control_plane
+  become: true
+  vars_files:
+      - secrets_k8s.yml
+  vars:
+      pod_network_cidr: "{{ pod_network_cidr }}"
+      control_plane_endpoint: "{{ vip_address }}"
+      kubeconfig_path: "{{ kubeconfig_path }}"
+
+  tasks:
+      - name: Initialize Kubernetes cluster with kubeadm
+        command: >
+            kubeadm init
+            --pod-network-cidr={{ pod_network_cidr }}
+            --control-plane-endpoint={{ control_plane_endpoint }}:{{ haproxy_frontend_port }}
+
+        register: kubeadm_init
+        args:
+            creates: /etc/kubernetes/admin.conf
+
+      - name: Re-upload certs and get certificate key
+        command: kubeadm init phase upload-certs --upload-certs
+        register: cert_upload
+        changed_when: false
+        run_once: true
+
+      - name: Extract certificate key from upload-certs output
+        set_fact:
+            kubeadm_certificate_key: "{{ cert_upload.stdout_lines | join(' ') | regex_search('([a-f0-9]{64})') }}"
+        run_once: true
+
+      - name: Debug certificate key
+        debug:
+            msg: "Extracted certificate key: {{ kubeadm_certificate_key }}"
+        run_once: true
+
+      - name: Create .kube directory for root
+        file:
+            path: /root/.kube
+            state: directory
+            mode: "0700"
+            owner: root
+            group: root
+
+      - name: Copy admin.conf to kubeconfig
+        copy:
+            src: /etc/kubernetes/admin.conf
+            dest: "{{ kubeconfig_path }}"
+            remote_src: yes
+            owner: root
+            group: root
+            mode: "0600"
+
+      - name: Extract base kubeadm join command (for workers)
+        command: kubeadm token create --print-join-command
+        register: join_command
+        changed_when: false
+        run_once: true
+
+      - name: Set join command for worker nodes
+        set_fact:
+            kubeadm_join_worker: "{{ join_command.stdout }}"
+        run_once: true
+
+      - name: Set join command for control plane nodes
+        set_fact:
+            kubeadm_join_control_plane: "{{ join_command.stdout }} --control-plane --certificate-key {{ kubeadm_certificate_key }}"
+        run_once: true
+
+      - name: Debug worker join command
+        debug:
+            msg: "Worker join command: {{ kubeadm_join_worker }}"
+        run_once: true
+
+      - name: Debug control plane join command
+        debug:
+            msg: "Control plane join command: {{ kubeadm_join_control_plane }}"
+        run_once: true
+
+      - name: Apply Flannel CNI plugin
+        command: >
+            kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+            --kubeconfig=/etc/kubernetes/admin.conf
+        register: flannel_apply
+        changed_when: "'created' in flannel_apply.stdout or 'configured' in flannel_apply.stdout"
+
+- name: Join Additional Control Planes
+  hosts: control_plane
+  become: true
+  vars_files:
+      - secrets_k8s.yml
+  vars:
+      kubeadm_join_control_plane: "{{ hostvars[groups['main_control_plane'][0]]['kubeadm_join_control_plane'] }}"
+
+  tasks:
+      - name: Join this node as a control plane
+        command: "{{ kubeadm_join_control_plane }}"
+        args:
+            creates: /etc/kubernetes/kubelet.conf
+
+- name: Distribute kubeconfig to all control planes
+  hosts: control_plane
+  become: true
+  vars_files:
+      - secrets_k8s.yml
+  vars:
+      kubeconfig_path: /root/.kube/config
+
+  tasks:
+      - name: Ensure .kube directory exists
+        file:
+            path: /root/.kube
+            state: directory
+            mode: "0700"
+            owner: root
+            group: root
+
+      - name: Fetch kubeconfig from main control plane
+        fetch:
+            src: /etc/kubernetes/admin.conf
+            dest: "/tmp/admin.conf.{{ inventory_hostname }}"
+            flat: yes
+        delegate_to: "{{ groups['main_control_plane'][0] }}"
+
+      - name: Install kubeconfig on this node
+        copy:
+            src: "/tmp/admin.conf.{{ inventory_hostname }}"
+            dest: "{{ kubeconfig_path }}"
+            owner: root
+            group: root
+            mode: "0600"
+
+      - name: Remove temporary kubeconfig copy
+        file:
+            path: "/tmp/admin.conf.{{ inventory_hostname }}"
+            state: absent
+
+- name: Join Worker Nodes
+  hosts: workers
+  become: true
+  vars_files:
+      - secrets_k8s.yml
+  vars:
+      kubeadm_join_worker: "{{ hostvars[groups['main_control_plane'][0]]['kubeadm_join_worker'] }}"
+
+  tasks:
+      - name: Join this node as a worker
+        command: "{{ kubeadm_join_worker }}"
+        args:
+            creates: /etc/kubernetes/kubelet.conf

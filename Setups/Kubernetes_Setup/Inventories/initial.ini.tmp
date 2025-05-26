@@ -1,0 +1,3 @@
+# This group contains the "raw" Ip's for the machines that are going to join the kubernetes cluster
+# This inventory is used only to generate the k8s_structure.ini
+[MachinesIPs]

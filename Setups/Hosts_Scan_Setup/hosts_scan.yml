@@ -1,0 +1,62 @@
+---
+- name: Discover active IPs on a network using nmap
+  hosts: localhost
+  gather_facts: no
+  become: true
+
+  vars_files:
+      - secrets_hosts_scan.yml
+
+  tasks:
+      - name: Ensure nmap is installed
+        ansible.builtin.package:
+            name: nmap
+            state: present
+
+      - name: Run nmap ping scan on the subnet
+        ansible.builtin.command: "nmap -sn --host-timeout 10s {{ subnet }}"
+        register: nmap_output
+
+      - name: Extract all IPs from nmap output
+        set_fact:
+            raw_active_ips: "{{ nmap_output.stdout | regex_findall('\\d+\\.\\d+\\.\\d+\\.\\d+') | unique }}"
+
+      - name: Get the IP address(es) of the current machine
+        ansible.builtin.command: "hostname -I"
+        register: local_ips_raw
+
+      - name: Parse local IPs into a list
+        set_fact:
+            local_ips: "{{ local_ips_raw.stdout.split() }}"
+
+      - name: Filter out local IPs from discovered ones
+        set_fact:
+            active_ips: "{{ raw_active_ips | difference(local_ips) }}"
+
+      - name: Filter IPs with last octet < ip_upper_limit
+        set_fact:
+            filtered_ips: []
+
+      - name: Add allowed IPs to filtered list
+        set_fact:
+            filtered_ips: "{{ filtered_ips + [item] }}"
+        loop: "{{ active_ips }}"
+        when: "(item.split('.')[-1] | int) < ip_upper_limit"
+
+      - name: Set active_ips to filtered list
+        set_fact:
+            active_ips: "{{ filtered_ips }}"
+
+      - name: Show final filtered IPs
+        debug:
+            msg: "Final IPs for inventory: {{ active_ips }}"
+
+      - name: Create a file with active IPs
+        ansible.builtin.copy:
+            dest: ../../Outputs/Hosts_Scan_Output/active_hosts.ini
+            content: |
+                [{{ inventory_group_name }}]
+                {% for ip in active_ips %}
+                {{ ip }}
+                {% endfor %}
+        delegate_to: localhost

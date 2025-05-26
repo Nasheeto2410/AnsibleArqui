@@ -1,0 +1,15 @@
+- name: Generate inventory from flat IP list
+  hosts: localhost
+  gather_facts: false
+  run_once: true
+  vars:
+      all_ips: "{{ groups['MachinesIPs'] }}"
+      n_control_planes: 3
+      main_control_plane: "{{ all_ips[0:1] }}"
+      control_planes: "{{ all_ips[1:n_control_planes] }}"
+      workers: "{{ all_ips[n_control_planes:] }}"
+  tasks:
+      - name: Render inventory file
+        template:
+            src: ../Templates/inventory_template.j2
+            dest: ../Inventories/k8s_structure.ini

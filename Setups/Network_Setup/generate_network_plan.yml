@@ -1,0 +1,116 @@
+- name: Load context into memory (for ansible_user and early values)
+  hosts: localhost
+  gather_facts: false
+
+  tasks:
+      - name: Load context file
+        slurp:
+            src: vars/context.yml
+        register: context_raw
+
+      - name: Set context_data fact
+        set_fact:
+            context_data: "{{ context_raw.content | b64decode | from_yaml }}"
+
+      - name: Export ansible_user for remote hosts
+        add_host:
+            name: "{{ item }}"
+            ansible_user: "{{ context_data.ansible_user }}"
+        loop: "{{ groups['all'] }}"
+
+- name: Translate and assign hostnames and IPs
+  hosts: all
+  gather_facts: true
+  serial: 1
+
+  tasks:
+      - name: Get MAC address of default interface
+        set_fact:
+            mac_address: "{{ ansible_default_ipv4.macaddress }}"
+
+      - name: Read translation history
+        slurp:
+            src: data/translation_history.yml
+        delegate_to: localhost
+        register: history_raw
+
+      - name: Parse translation history safely
+        set_fact:
+            translation_data: "{{ (history_raw.content | b64decode | from_yaml) | default({}, true) }}"
+        delegate_to: localhost
+
+      - name: Check if MAC exists in translation history
+        set_fact:
+            is_known_host: "{{ translation_data[mac_address] is defined }}"
+        delegate_to: localhost
+
+      - name: Use existing IP and hostname from history if known
+        when: is_known_host
+        set_fact:
+            assigned_ip: "{{ translation_data[mac_address].ip }}"
+            assigned_hostname: "{{ translation_data[mac_address].hostname }}"
+        delegate_to: localhost
+
+      - name: Assign new IP and hostname if not in history
+        when: not is_known_host
+        block:
+            - name: Reload and parse latest context
+              slurp:
+                  src: vars/context.yml
+              delegate_to: localhost
+              register: context_raw
+
+            - name: Set context_data fact
+              set_fact:
+                  context_data: "{{ context_raw.content | b64decode | from_yaml }}"
+              delegate_to: localhost
+
+            - name: Generate new IP and hostname
+              set_fact:
+                  assigned_ip: "{{ context_data.ip_prefix }}.{{ context_data.ip_start }}"
+                  assigned_hostname: "{{ context_data.hostname_prefix }}{{ context_data.hostname_start }}"
+              delegate_to: localhost
+
+            - name: Update context file with incremented values
+              copy:
+                  dest: vars/context.yml
+                  content: |
+                      ip_prefix: "{{ context_data.ip_prefix }}"
+                      ip_start: {{ context_data.ip_start | int + 1 }}
+                      hostname_prefix: "{{ context_data.hostname_prefix }}"
+                      hostname_start: {{ context_data.hostname_start | int + 1 }}
+                      ansible_user: "{{ context_data.ansible_user }}"
+              delegate_to: localhost
+
+            - name: Add new host entry to translation_data
+              set_fact:
+                  translation_data: >-
+                      {{
+                        translation_data | combine({
+                          (mac_address): {
+                            'ip': assigned_ip,
+                            'hostname': assigned_hostname
+                          }
+                        }, recursive=True)
+                      }}
+              delegate_to: localhost
+
+            - name: Save updated translation history
+              copy:
+                  dest: data/translation_history.yml
+                  content: "{{ translation_data | to_nice_yaml }}"
+              delegate_to: localhost
+
+      - name: Update current translation map
+        blockinfile:
+            path: data/current_translation.yml
+            block: |
+                {{ mac_address }}:
+                  ip: "{{ assigned_ip }}"
+                  hostname: "{{ assigned_hostname }}"
+            marker: "# {mark} MAC {{ mac_address }}"
+        delegate_to: localhost
+
+      - name: Display assignment for this host
+        debug:
+            msg: "MAC: {{ mac_address }} -> IP: {{ assigned_ip }} | Hostname: {{ assigned_hostname }}"
