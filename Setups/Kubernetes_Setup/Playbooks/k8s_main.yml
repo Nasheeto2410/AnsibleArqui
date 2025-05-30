@@ -4,3 +4,6 @@
 
 - name: Build Kubernetes environment
   import_playbook: k8s_build_setup.yml
+
+- name: Configure Kubernetes post-build settings
+  import_playbook: k8s_post_build_configs.yml

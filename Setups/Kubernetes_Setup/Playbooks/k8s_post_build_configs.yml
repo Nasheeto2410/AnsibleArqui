@@ -1,0 +1,47 @@
+---
+- name: Install kubecolor on Kubernetes Control Planes
+  hosts: main_control_plane:control_plane
+  become: true
+  gather_facts: yes
+  vars_files:
+      - secrets_k8s.yml
+  vars:
+      kubecolor_version: "0.5.1"
+      kubecolor_deb_url: "https://github.com/kubecolor/kubecolor/releases/download/v{{ kubecolor_version }}/kubecolor_{{ kubecolor_version }}_linux_amd64.deb"
+      kubecolor_deb_path: "/tmp/kubecolor_{{ kubecolor_version }}_linux_amd64.deb"
+
+  tasks:
+      - name: Ensure required packages are installed
+        apt:
+            name:
+                - wget
+                - bash-completion
+            state: present
+            update_cache: yes
+
+      - name: Download kubecolor .deb package
+        get_url:
+            url: "{{ kubecolor_deb_url }}"
+            dest: "{{ kubecolor_deb_path }}"
+            mode: "0644"
+
+      - name: Install kubecolor from .deb package
+        apt:
+            deb: "{{ kubecolor_deb_path }}"
+            state: present
+
+      - name: Rename kubecolor binary to hidden file
+        command: mv /usr/bin/kubecolor /usr/bin/.kubecolor
+        args:
+            creates: /usr/bin/.kubecolor
+
+      - name: Alias kubectl to hidden kubecolor binary and enable autocompletion
+        blockinfile:
+            path: /root/.bashrc
+            create: yes
+            block: |
+                # Use hidden kubecolor binary for kubectl
+                alias kubectl='/usr/bin/.kubecolor'
+
+                # Load kubectl autocompletion
+                source <(kubectl completion bash)
