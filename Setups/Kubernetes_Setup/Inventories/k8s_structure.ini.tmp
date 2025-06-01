@@ -1,6 +1,8 @@
+# This part of the template contains the node that will bootstrap the cluster
 [main_control_plane]
 
+# These nodes will be control plane nodes along with the main control plane (No scheduling, just request resolution)
 [control_plane]
 
+# These nodes will be the workers where pods and tasks will be scheduled
 [workers]
-

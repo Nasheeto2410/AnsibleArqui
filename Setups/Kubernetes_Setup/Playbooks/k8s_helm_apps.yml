@@ -1,0 +1,68 @@
+---
+- name: Install kubecolor and Helm on Kubernetes Control Planes
+  hosts: main_control_plane:control_plane
+  become: true
+  gather_facts: yes
+  vars_files:
+      - secrets_k8s.yml
+  vars:
+      helm_version: "3.18.1"
+      helm_tarball: "helm-v{{ helm_version }}-linux-amd64.tar.gz"
+      helm_url: "https://get.helm.sh/{{ helm_tarball }}"
+      helm_dest_dir: "/tmp"
+      helm_extracted_dir: "/tmp/linux-amd64"
+      helm_binary_path: "/usr/local/bin/helm"
+
+      ldap_admin_password: "opensesame"
+      ldap_organisation: "IT-LAB-UAI"
+      ldap_domain: "it.lab.uai"
+
+  tasks:
+      - name: Download Helm tarball
+        get_url:
+            url: "{{ helm_url }}"
+            dest: "{{ helm_dest_dir }}/{{ helm_tarball }}"
+            mode: "0644"
+
+      - name: Extract Helm tarball
+        unarchive:
+            src: "{{ helm_dest_dir }}/{{ helm_tarball }}"
+            dest: "{{ helm_dest_dir }}"
+            remote_src: yes
+            creates: "{{ helm_extracted_dir }}/helm"
+
+      - name: Move Helm binary to /usr/local/bin
+        command: mv {{ helm_extracted_dir }}/helm {{ helm_binary_path }}
+        args:
+            creates: "{{ helm_binary_path }}"
+
+      - name: Remove extracted Helm files and tarball
+        file:
+            path: "{{ item }}"
+            state: absent
+        loop:
+            - "{{ helm_extracted_dir }}"
+            - "{{ helm_dest_dir }}/{{ helm_tarball }}"
+
+      - name: Add Helm repository
+        command: helm repo add it-lab-uai https://it-lab-uai.github.io/Kubernetes-Helm/
+        environment:
+            HELM_HOME: /root/.cache/helm
+
+      - name: Install OpenLDAP via Helm
+        command: >
+            helm install openldap it-lab-uai/OpenLDAP
+            --set ldap.adminPassword='{{ ldap_admin_password }}'
+            --set ldap.organisation='{{ ldap_organisation }}'
+            --set ldap.domain='{{ ldap_domain }}'
+        args:
+            chdir: /root
+        environment:
+            HELM_HOME: /root/.cache/helm
+        register: helm_output
+        changed_when: "'STATUS: deployed' in helm_output.stdout or helm_output.stderr is search('already exists')"
+        failed_when: helm_output.rc != 0 and ('already exists' not in helm_output.stderr)
+
+      - name: Show OpenLDAP Helm install result
+        debug:
+            msg: "{{ helm_output.stdout_lines }}"
