@@ -53,7 +53,7 @@
 
       - name: Create a file with active IPs
         ansible.builtin.copy:
-            dest: ../../Outputs/Hosts_Scan_Output/active_hosts.ini
+            dest: ./active_hosts.ini
             content: |
                 [{{ inventory_group_name }}]
                 {% for ip in active_ips %}
