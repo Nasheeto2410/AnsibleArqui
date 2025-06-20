@@ -1,0 +1,13 @@
+---
+# Main Configuration Playbook
+# This playbook orchestrates the host configuration process by running:
+# 1. add_hosts.yml - Sets up SSH keys and known_hosts
+# 2. create_admin_user.yml - Creates admin user and removes sudo from initial user
+
+# First set up SSH keys and known_hosts
+- name: Setup SSH Keys and Known Hosts
+  import_playbook: add_hosts.yml
+
+# Then create the admin user and remove sudo from the initial setup user
+- name: Create Admin User and Remove Initial User Privileges
+  import_playbook: create_admin_user.yml

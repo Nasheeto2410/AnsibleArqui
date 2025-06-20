@@ -11,7 +11,7 @@
   vars:
       new_user_enc_password: "{{new_user_passwd | password_hash('sha512')}}"
   tasks:
-      - name: Create labadmin User for configurations
+      - name: Create " {{ new_user_name }} " User for configurations
         ansible.builtin.user:
             name: "{{ new_user_name }}"
             comment: Admin setup User
@@ -27,7 +27,7 @@
             state: present
             key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
 
-      - name: Remove lab from Sudo groups
+      - name: Remove "{{ ansible_user }}" from Sudo groups
         ansible.builtin.user:
             name: "{{ ansible_user }}"
             groups: "{{ ansible_user}}"
