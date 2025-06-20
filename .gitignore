@@ -3,5 +3,5 @@ secrets*.yml
 
 
 # Network Setup files
-/Setups/Network_Setup/data/*.yml
-/Setups/Network_Setup/vars/*.yml
+Network_Setup/data/*.yml
+Network_Setup/vars/*.yml

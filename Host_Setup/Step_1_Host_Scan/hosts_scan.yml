@@ -1,0 +1,77 @@
+---
+- name: Discover active IPs on a network using nmap
+  hosts: localhost
+  gather_facts: yes
+  become: true
+  vars_files:
+      - secrets_hosts_scan.yml
+
+  tasks:
+      - name: Ensure nmap is installed
+        ansible.builtin.package:
+            name: nmap
+            state: present
+
+      - name: Create vlans_hosts directory if it doesn't exist
+        ansible.builtin.file:
+            path: "{{ playbook_dir }}/vlans_hosts"
+            state: directory
+            mode: "0755"
+
+      - name: Run nmap ping scan on the subnet
+        ansible.builtin.command: "nmap -sn --host-timeout 10s {{ subnet }}"
+        register: nmap_output
+
+      - name: Extract all IPs from nmap output
+        set_fact:
+            raw_active_ips: "{{ nmap_output.stdout | regex_findall('\\d+\\.\\d+\\.\\d+\\.\\d+') | unique }}"
+
+      - name: Get the IP address(es) of the current machine
+        ansible.builtin.command: "hostname -I"
+        register: local_ips_raw
+
+      - name: Parse local IPs into a list
+        set_fact:
+            local_ips: "{{ local_ips_raw.stdout.split() }}"
+
+      - name: Filter out local IPs from discovered ones
+        set_fact:
+            active_ips: "{{ raw_active_ips | difference(local_ips) }}"
+
+      - name: Filter IPs within specified range (lower and upper limits)
+        set_fact:
+            filtered_ips: []
+
+      - name: Add IPs within allowed range to filtered list
+        set_fact:
+            filtered_ips: "{{ filtered_ips + [item] }}"
+        loop: "{{ active_ips }}"
+        when: "(item.split('.')[-1] | int) >= ip_lower_limit and (item.split('.')[-1] | int) < ip_upper_limit"
+
+      - name: Set active_ips to filtered list
+        set_fact:
+            active_ips: "{{ filtered_ips }}"
+
+      - name: Show final filtered IPs
+        debug:
+            msg: "Final IPs for inventory: {{ active_ips }}"
+
+      - name: Display VLAN and IP range information
+        debug:
+            msg: "Scanning VLAN: {{ vlan_name }} on subnet {{ subnet }} (IP range: {{ ip_lower_limit }}-{{ ip_upper_limit }})"
+
+      - name: Create a file with active IPs in vlans_hosts directory
+        ansible.builtin.copy:
+            dest: "{{ playbook_dir }}/vlans_hosts/{{ vlan_name }}_active_hosts.ini"
+            content: |
+                ; Last scan performed on: {{ ansible_date_time.iso8601 }}
+                [{{ inventory_group_name }}]
+                {% for ip in active_ips %}
+                {{ ip }}
+                {% endfor %}
+            force: yes # Ensure the file is always overwritten
+        delegate_to: localhost
+
+      - name: Confirmation of scan update
+        debug:
+            msg: "Scan completed and {{ vlan_name }}_active_hosts.ini updated at {{ ansible_date_time.iso8601 }}"
