@@ -1,5 +1,0 @@
-ip_prefix: # prefix of the IP address
-ip_start: # Start number for the IP address
-hostname_prefix: # prefix of the hostname
-hostname_start: # Start number for the hostname
-ansible_user: #  Ansible user for the devices
