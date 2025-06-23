@@ -1,0 +1,105 @@
+---
+# -------------------------------------------------------------
+# Play 1: Generate the translated inventory file for VLAN
+# -------------------------------------------------------------
+- name: Generate translated inventory file for VLAN
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+      target_vlan: Vlan3 # Override with --extra-vars
+      translations_file: "Translations/{{ target_vlan }}/current_translation.yml"
+      inventory_output: "../../Inventories/{{ target_vlan }}translation_inventory.ini"
+
+  vars_files:
+      - "{{ translations_file }}"
+
+  tasks:
+      - name: Build translated inventory content
+        set_fact:
+            generated_inventory: |
+                [{{ target_vlan }}_translated]
+                {% for item in Mappings %}
+                {{ item.IP }} hostname={{ item.Hostname }} mac={{ item.MAC }}
+                {% endfor %}
+
+      - name: Ensure Inventories directory exists
+        file:
+            path: "{{ inventory_output | dirname }}"
+            state: directory
+            mode: "0755"
+
+      - name: Write translated inventory to file
+        copy:
+            content: "{{ generated_inventory }}"
+            dest: "{{ inventory_output }}"
+            mode: "0644"
+
+      - name: Show location of generated inventory
+        debug:
+            msg: "Inventory saved to {{ inventory_output }}"
+
+# -------------------------------------------------------------
+# Play 2: Configure static IP and hostname on remote machines
+# -------------------------------------------------------------
+- name: Apply static network config and hostname to target machines
+  hosts: all
+  gather_facts: true
+  become: true
+
+  vars:
+      target_vlan: Vlan3 # Override this with --extra-vars
+      interface_name: "{{ ansible_facts['default_ipv4']['interface'] }}"
+      vlan_gateway: "{{ Ip_Prefix }}.1"
+
+  vars_files:
+      - "Translations/{{ target_vlan }}/current_translation.yml"
+      - "Networks_Context/{{ target_vlan }}/context.yml"
+      - "secrets_set_ip_mappings.yml"
+
+  tasks:
+      - name: Extract MAC from inventory
+        set_fact:
+            mac_address: "{{ hostvars[inventory_hostname]['mac'] }}"
+
+      - name: Find matching mapping for this host
+        set_fact:
+            host_mapping: "{{ item }}"
+        loop: "{{ Mappings }}"
+        when: item.MAC == mac_address
+
+      - name: Fail if no mapping found
+        fail:
+            msg: "No IP/hostname mapping found for MAC {{ mac_address }}"
+        when: host_mapping is not defined
+
+      - name: Set hostname before IP change
+        hostname:
+            name: "{{ host_mapping.Hostname }}"
+
+      - name: Show selected network interface and target IP
+        debug:
+            msg: "Preparing to configure static IP on interface '{{ interface_name }}' with IP {{ host_mapping.IP }}"
+
+      - name: Get NetworkManager connection name for interface
+        shell: |
+            nmcli -t -f NAME,DEVICE connection show | grep ":{{ interface_name }}" | cut -d':' -f1
+        register: nmcli_connection_name
+        changed_when: false
+        failed_when: nmcli_connection_name.stdout == ""
+
+      - name: Configure static IP (do not bring interface down)
+        shell: |
+            nmcli connection modify "{{ nmcli_connection_name.stdout }}" \
+              ipv4.addresses {{ host_mapping.IP }}/24 \
+              ipv4.gateway {{ vlan_gateway }} \
+              ipv4.method manual \
+              connection.autoconnect yes
+        register: nmcli_config
+        changed_when: true
+
+      - name: Reboot host without waiting (fire and forget)
+        shell: "sleep 2 && reboot"
+        async: 1
+        poll: 0
+        ignore_errors: true

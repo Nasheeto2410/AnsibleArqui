@@ -1,0 +1,84 @@
+---
+- name: Delete swap partition and configure host for Kubernetes
+  hosts: all
+  become: yes
+  become_method: su
+  become_user: root
+
+  vars_files:
+      - "secrets_k8s.yml"
+
+  tasks:
+      - name: Disable swap
+        command: /sbin/swapoff -a
+        become: yes
+        become_user: root
+
+      - name: Ensure parted is installed
+        apt:
+            name: parted
+            state: present
+            update_cache: yes
+        become: yes
+
+      - name: Get partition information
+        parted:
+            device: /dev/nvme0n1
+            unit: MiB
+        register: disk_info
+
+      - name: Display current partition information
+        debug:
+            var: disk_info.partitions
+
+      - name: Find swap partition
+        set_fact:
+            swap_partition: "{{ item }}"
+        loop: "{{ disk_info.partitions }}"
+        when: item.flags is defined and 'swap' in item.flags
+        register: swap_find_result
+
+      - name: Delete swap partition
+        parted:
+            device: /dev/nvme0n1
+            number: "{{ swap_partition.num }}"
+            state: absent
+        become: yes
+        when: swap_find_result.results | selectattr('ansible_facts', 'defined') | list | length > 0
+
+      - name: Remove swap entry from fstab
+        lineinfile:
+            path: /etc/fstab
+            regexp: ".*swap.*"
+            state: absent
+        become: yes
+
+      - name: Remove extended partition if it exists
+        parted:
+            device: /dev/nvme0n1
+            number: 2
+            state: absent
+        become: yes
+        ignore_errors: yes
+        register: extended_removed
+
+      - name: Remove logical partition (swap) if it exists
+        parted:
+            device: /dev/nvme0n1
+            number: 5
+            state: absent
+        become: yes
+        ignore_errors: yes
+        register: logical_removed
+
+      - name: Update partition information after removing extended partition
+        parted:
+            device: /dev/nvme0n1
+            unit: MiB
+        register: updated_disk_info
+        when: extended_removed is defined and not extended_removed.failed
+
+      - name: Display updated partition information
+        debug:
+            var: updated_disk_info.partitions
+        when: extended_removed is defined and not extended_removed.failed and updated_disk_info is defined

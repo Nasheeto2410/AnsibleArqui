@@ -1,5 +1,3 @@
-# You will be connecting as the initial setup user to the machine but you will
-# desudo that user and sudo the new admin user with a new password
 ---
 - name: Setup Admin User and Change Root Password
   hosts: all
@@ -11,7 +9,13 @@
   vars:
       new_user_enc_password: "{{ new_user_passwd | password_hash('sha512') }}"
       root_enc_password: "{{ root_new_passwd | password_hash('sha512') }}"
+
   tasks:
+      - name: Ensure sudo is installed
+        ansible.builtin.package:
+            name: sudo
+            state: present
+
       - name: Create "{{ new_user_name }}" user for configurations
         ansible.builtin.user:
             name: "{{ new_user_name }}"

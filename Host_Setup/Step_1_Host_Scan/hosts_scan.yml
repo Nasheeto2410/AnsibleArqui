@@ -32,7 +32,7 @@
 
       - name: Extract all MACs from nmap output
         set_fact:
-            macs: "{{ nmap_output.stdout | regex_findall('MAC Address: ([0-9A-:F]{17})') }}"
+            macs: "{{ nmap_output.stdout | regex_findall('MAC Address: ([0-9A-F:]{17})') }}"
 
       - name: DEBUG - Show extracted IPs and MACs
         debug:
