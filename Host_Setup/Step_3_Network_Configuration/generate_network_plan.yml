@@ -1,0 +1,100 @@
+- name: Translate hosts from one VLAN to another with history support
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+      source_vlan_id: 10
+      destination_vlan_id: 11
+
+      scan_file: "../Step_1_Host_Scan/vlans_hosts/vlan{{ source_vlan_id }}_active_hosts.ini"
+      context_file: "Networks_Context/Vlan{{ destination_vlan_id }}/context.yml"
+      translation_output: "Translations/Vlan{{ destination_vlan_id }}/current_translation.yml"
+      history_file: "Translations/Vlan{{ destination_vlan_id }}/history_registry.yml"
+      context_template: "templates/context.yml.j2"
+
+  vars_files:
+      - "{{ context_file }}"
+
+  tasks:
+      - name: Read active hosts file from source VLAN
+        slurp:
+            src: "{{ scan_file }}"
+        register: scan_raw
+
+      - name: Extract IP and MAC pairs from scan file
+        set_fact:
+            active_hosts: >-
+                {{
+                  scan_raw.content | b64decode
+                  | regex_findall('(\d+\.\d+\.\d+\.\d+)\s+mac=([0-9A-Fa-f:]{17})')
+                  | map('list') | list
+                }}
+
+      - name: Load existing history if available
+        set_fact:
+            translation_history: "{{ lookup('file', history_file) | from_yaml }}"
+        ignore_errors: true
+
+      - name: Ensure history is defined even if file is missing
+        set_fact:
+            translation_history: "{{ translation_history | default([]) }}"
+
+      - name: Initialize current_translation and new_history entries
+        set_fact:
+            current_translation: []
+            new_history_entries: []
+
+      - name: Build mappings with history awareness
+        set_fact:
+            current_translation: "{{ current_translation + [translation_entry] }}"
+            new_history_entries: "{{ new_history_entries + ([translation_entry] if is_new else []) }}"
+        vars:
+            mac: "{{ item.1 }}"
+            known_entry: "{{ translation_history | selectattr('MAC', 'equalto', mac) | list | first }}"
+            is_new: "{{ known_entry is not defined }}"
+            index: "{{ loop.index0 }}"
+            translation_entry: >-
+                {{
+                  known_entry if known_entry is defined else {
+                    'MAC': mac,
+                    'Hostname': Hostname.prefix ~ ("%0{}d".format(Hostname.padding | int) % (Hostname.last_assigned_number | int + new_history_entries | length + 1)),
+                    'IP': Ip_Prefix ~ '.' ~ (IP.last_assigned | int + new_history_entries | length + 1)
+                  }
+                }}
+        loop: "{{ active_hosts }}"
+        loop_control:
+            label: "{{ item.1 }}"
+
+      - name: Write current translation file
+        copy:
+            dest: "{{ translation_output }}"
+            content: |
+                Mappings:
+                {% for host in current_translation %}
+                  - IP: {{ host.IP }}
+                    MAC: {{ host.MAC }}
+                    Hostname: {{ host.Hostname }}
+                {% endfor %}
+
+      - name: Update context based on number of new MACs
+        set_fact:
+            updated_context:
+                VlanName: "{{ VlanName }}"
+                VlanID: "{{ VlanID }}"
+                Ip_Prefix: "{{ Ip_Prefix }}"
+                Hostname:
+                    prefix: "{{ Hostname.prefix }}"
+                    padding: "{{ Hostname.padding | int }}"
+                    last_assigned_number: "{{ Hostname.last_assigned_number | int + (new_history_entries | length) }}"
+                IP:
+                    last_assigned: "{{ IP.last_assigned | int + (new_history_entries | length) }}"
+
+      - name: Save updated context file
+        template:
+            src: "{{ context_template }}"
+            dest: "{{ context_file }}"
+
+      - name: Append new entries to history safely
+        copy:
+            dest: "{{ history_file }}"
+            content: "{{ ((translation_history | default([])) + (new_history_entries | default([]))) | to_nice_yaml }}"
