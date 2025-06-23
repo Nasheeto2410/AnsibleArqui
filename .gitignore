@@ -3,5 +3,6 @@ secrets*.yml
 
 
 # Network Setup files
-Network_Setup/data/*.yml
-Network_Setup/vars/*.yml
+Host_Setup/Step_3_Network_Configuration/Translations/*
+Host_Setup/Step_3_Network_Configuration/Networks_Context/*
+Host_Setup/Step_3_Network_Configuration/templates/*
