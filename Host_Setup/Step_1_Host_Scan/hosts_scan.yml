@@ -16,15 +16,43 @@
         ansible.builtin.file:
             path: "{{ playbook_dir }}/vlans_hosts"
             state: directory
-            mode: "0755"
+            mode: "0777"
 
-      - name: Run nmap ping scan on the subnet
-        ansible.builtin.command: "nmap -sn --host-timeout 10s {{ subnet }}"
+      - name: Run nmap scan with standard output
+        ansible.builtin.command: "nmap -sn {{ subnet }}"
         register: nmap_output
+
+      - name: DEBUG - Show raw nmap stdout
+        debug:
+            var: nmap_output.stdout
 
       - name: Extract all IPs from nmap output
         set_fact:
-            raw_active_ips: "{{ nmap_output.stdout | regex_findall('\\d+\\.\\d+\\.\\d+\\.\\d+') | unique }}"
+            raw_active_ips: "{{ nmap_output.stdout | regex_findall('Nmap scan report for (\\d+\\.\\d+\\.\\d+\\.\\d+)') }}"
+
+      - name: Extract all MACs from nmap output
+        set_fact:
+            macs: "{{ nmap_output.stdout | regex_findall('MAC Address: ([0-9A-F:]{17})') }}"
+
+      - name: DEBUG - Show extracted IPs and MACs
+        debug:
+            msg: |
+                IPs: {{ raw_active_ips }}
+                MACs: {{ macs }}
+
+      - name: Build IP-to-MAC mapping (best effort)
+        set_fact:
+            ip_mac_mapping: >-
+                {{
+                  dict(
+                    raw_active_ips[:macs|length]
+                    | zip(macs)
+                  )
+                }}
+
+      - name: DEBUG - Show final IP-to-MAC mapping
+        debug:
+            var: ip_mac_mapping
 
       - name: Get the IP address(es) of the current machine
         ansible.builtin.command: "hostname -I"
@@ -38,15 +66,17 @@
         set_fact:
             active_ips: "{{ raw_active_ips | difference(local_ips) }}"
 
-      - name: Filter IPs within specified range (lower and upper limits)
+      - name: Initialize filtered IPs list
         set_fact:
             filtered_ips: []
 
-      - name: Add IPs within allowed range to filtered list
+      - name: Add only IPs within specified range to filtered list
         set_fact:
             filtered_ips: "{{ filtered_ips + [item] }}"
         loop: "{{ active_ips }}"
-        when: "(item.split('.')[-1] | int) >= ip_lower_limit and (item.split('.')[-1] | int) < ip_upper_limit"
+        when: >
+            (item.split('.')[-1] | int) >= ip_lower_limit and
+            (item.split('.')[-1] | int) < ip_upper_limit
 
       - name: Set active_ips to filtered list
         set_fact:
@@ -67,9 +97,10 @@
                 ; Last scan performed on: {{ ansible_date_time.iso8601 }}
                 [{{ inventory_group_name }}]
                 {% for ip in active_ips %}
-                {{ ip }}
+                {{ ip }} mac={{ ip_mac_mapping[ip] | default('Unknown') }}
                 {% endfor %}
             force: yes # Ensure the file is always overwritten
+            mode: "0666"  # Read-write permissions for everyone
         delegate_to: localhost
 
       - name: Confirmation of scan update
