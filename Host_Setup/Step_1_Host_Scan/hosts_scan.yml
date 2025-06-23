@@ -32,7 +32,7 @@
 
       - name: Extract all MACs from nmap output
         set_fact:
-            macs: "{{ nmap_output.stdout | regex_findall('MAC Address: ([0-9A-F:]{17})') }}"
+            macs: "{{ nmap_output.stdout | regex_findall('MAC Address: ([0-9A-:F]{17})') }}"
 
       - name: DEBUG - Show extracted IPs and MACs
         debug:
@@ -99,8 +99,8 @@
                 {% for ip in active_ips %}
                 {{ ip }} mac={{ ip_mac_mapping[ip] | default('Unknown') }}
                 {% endfor %}
-            force: yes # Ensure the file is always overwritten
-            mode: "0666"  # Read-write permissions for everyone
+            force: yes
+            mode: "0666"
         delegate_to: localhost
 
       - name: Confirmation of scan update
