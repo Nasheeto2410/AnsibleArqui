@@ -1,7 +1,7 @@
-# You will be conecting as the initial setup user to the machine but you will
+# You will be connecting as the initial setup user to the machine but you will
 # desudo that user and sudo the new admin user with a new password
 ---
-- name: Setup Admin User
+- name: Setup Admin User and Change Root Password
   hosts: all
   become: yes
   become_method: su
@@ -9,13 +9,14 @@
   vars_files:
       - secrets_computers_setup.yml
   vars:
-      new_user_enc_password: "{{new_user_passwd | password_hash('sha512')}}"
+      new_user_enc_password: "{{ new_user_passwd | password_hash('sha512') }}"
+      root_enc_password: "{{ root_new_passwd | password_hash('sha512') }}"
   tasks:
-      - name: Create " {{ new_user_name }} " User for configurations
+      - name: Create "{{ new_user_name }}" user for configurations
         ansible.builtin.user:
             name: "{{ new_user_name }}"
             comment: Admin setup User
-            password: "{{  new_user_enc_password }}"
+            password: "{{ new_user_enc_password }}"
             shell: /bin/bash
             groups: sudo
             append: yes
@@ -27,8 +28,13 @@
             state: present
             key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
 
-      - name: Remove "{{ ansible_user }}" from Sudo groups
+      - name: Remove "{{ ansible_user }}" from sudo groups
         ansible.builtin.user:
             name: "{{ ansible_user }}"
-            groups: "{{ ansible_user}}"
+            groups: "{{ ansible_user }}"
             append: no
+
+      - name: Change root password
+        ansible.builtin.user:
+            name: root
+            password: "{{ root_enc_password }}"
