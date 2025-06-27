@@ -1,0 +1,49 @@
+---
+- name: Prueba de rendimiento y estrés de Ansible
+  hosts: nodos
+  gather_facts: yes
+  tasks:
+    - name: Actualizar cache de paquetes
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Instalar paquetes básicos
+      apt:
+        name:
+          - curl
+          - wget
+          - htop
+          - git
+          - vim
+        state: present
+
+    - name: Crear usuario de prueba
+      user:
+        name: testuser
+        shell: /bin/bash
+        create_home: yes
+        state: present
+
+    - name: Crear directorio de trabajo
+      file:
+        path: /tmp/ansible-test
+        state: directory
+        mode: '0755'
+
+    - name: Crear archivo de prueba
+      copy:
+        content: |
+          Este es un archivo de prueba creado por Ansible
+          Timestamp: {{ ansible_date_time.iso8601 }}
+          Host: {{ inventory_hostname }}
+        dest: /tmp/ansible-test/test-file.txt
+        mode: '0644'
+
+    - name: Ejecutar comando de prueba de CPU
+      command: echo "Prueba completada en {{ inventory_hostname }}"
+      register: cpu_test
+
+    - name: Mostrar resultado
+      debug:
+        msg: "{{ cpu_test.stdout }}"

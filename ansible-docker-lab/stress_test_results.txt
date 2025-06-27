@@ -1,0 +1,293 @@
+﻿================================
+RESULTADOS DE PRUEBAS DE ESTRES
+Fecha: 2025-06-26 20:47:30
+================================
+
+PRUEBA CON 1 FORKS:
+----------------------
+wsl : [WARNING]: Ansible is being run in a world writable directory
+En C:\Users\jilop\OneDrive - Universidad Adolfo Ibanez\Documents\Universidad\Segundo Ciclo\Tercer Semestre SC\Arquitectura de Sistemas\AnsibleArqui\ansible-docker-lab\stress_test_simple.ps1: 
+201 Carácter: 23
++ ...   $output = wsl bash -c "cd '$wslProjectDir' && ansible-playbook -i i ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([WARNING]: Ansi...table directory:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+(/mnt/c/Users/jilop/OneDrive - Universidad Adolfo
+Ibanez/Documents/Universidad/Segundo Ciclo/Tercer Semestre SC/Arquitectura de
+Sistemas/AnsibleArqui/ansible-docker-lab), ignoring it as an ansible.cfg
+source. For more information see
+https://docs.ansible.com/ansible/devel/reference_appendices/config.html#cfg-in-
+world-writable-dir
+
+PLAY [Prueba de rendimiento y estr├®s de Ansible] *******************************
+
+TASK [Gathering Facts] *********************************************************
+ok: [node1]
+ok: [node2]
+ok: [node3]
+
+TASK [Actualizar cache de paquetes] ********************************************
+ok: [node1]
+ok: [node2]
+ok: [node3]
+
+TASK [Instalar paquetes b├ísicos] ***********************************************
+changed: [node1]
+changed: [node2]
+changed: [node3]
+
+TASK [Crear usuario de prueba] *************************************************
+changed: [node1]
+changed: [node2]
+changed: [node3]
+
+TASK [Crear directorio de trabajo] *********************************************
+changed: [node1]
+changed: [node2]
+changed: [node3]
+
+TASK [Crear archivo de prueba] *************************************************
+changed: [node1]
+changed: [node2]
+changed: [node3]
+
+TASK [Ejecutar comando de prueba de CPU] ***************************************
+changed: [node1]
+changed: [node2]
+changed: [node3]
+
+TASK [Mostrar resultado] *******************************************************
+ok: [node1] => {
+    "msg": "Prueba completada en node1"
+}
+ok: [node2] => {
+    "msg": "Prueba completada en node2"
+}
+ok: [node3] => {
+    "msg": "Prueba completada en node3"
+}
+
+PLAY RECAP *********************************************************************
+node1                      : ok=8    changed=5    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+node2                      : ok=8    changed=5    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+node3                      : ok=8    changed=5    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+
+Duracion total: 62.6504052 segundos
+
+PRUEBA CON 3 FORKS:
+----------------------
+wsl : [WARNING]: Ansible is being run in a world writable directory
+En C:\Users\jilop\OneDrive - Universidad Adolfo Ibanez\Documents\Universidad\Segundo Ciclo\Tercer Semestre SC\Arquitectura de Sistemas\AnsibleArqui\ansible-docker-lab\stress_test_simple.ps1: 
+201 Carácter: 23
++ ...   $output = wsl bash -c "cd '$wslProjectDir' && ansible-playbook -i i ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([WARNING]: Ansi...table directory:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+(/mnt/c/Users/jilop/OneDrive - Universidad Adolfo
+Ibanez/Documents/Universidad/Segundo Ciclo/Tercer Semestre SC/Arquitectura de
+Sistemas/AnsibleArqui/ansible-docker-lab), ignoring it as an ansible.cfg
+source. For more information see
+https://docs.ansible.com/ansible/devel/reference_appendices/config.html#cfg-in-
+world-writable-dir
+
+PLAY [Prueba de rendimiento y estr├®s de Ansible] *******************************
+
+TASK [Gathering Facts] *********************************************************
+ok: [node1]
+ok: [node2]
+ok: [node3]
+
+TASK [Actualizar cache de paquetes] ********************************************
+ok: [node3]
+ok: [node1]
+ok: [node2]
+
+TASK [Instalar paquetes b├ísicos] ***********************************************
+ok: [node2]
+ok: [node1]
+ok: [node3]
+
+TASK [Crear usuario de prueba] *************************************************
+ok: [node2]
+ok: [node3]
+ok: [node1]
+
+TASK [Crear directorio de trabajo] *********************************************
+ok: [node1]
+ok: [node3]
+ok: [node2]
+
+TASK [Crear archivo de prueba] *************************************************
+changed: [node3]
+changed: [node2]
+changed: [node1]
+
+TASK [Ejecutar comando de prueba de CPU] ***************************************
+changed: [node2]
+changed: [node3]
+changed: [node1]
+
+TASK [Mostrar resultado] *******************************************************
+ok: [node1] => {
+    "msg": "Prueba completada en node1"
+}
+ok: [node2] => {
+    "msg": "Prueba completada en node2"
+}
+ok: [node3] => {
+    "msg": "Prueba completada en node3"
+}
+
+PLAY RECAP *********************************************************************
+node1                      : ok=8    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+node2                      : ok=8    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+node3                      : ok=8    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+
+Duracion total: 10.0126967 segundos
+
+PRUEBA CON 5 FORKS:
+----------------------
+wsl : [WARNING]: Ansible is being run in a world writable directory
+En C:\Users\jilop\OneDrive - Universidad Adolfo Ibanez\Documents\Universidad\Segundo Ciclo\Tercer Semestre SC\Arquitectura de Sistemas\AnsibleArqui\ansible-docker-lab\stress_test_simple.ps1: 
+201 Carácter: 23
++ ...   $output = wsl bash -c "cd '$wslProjectDir' && ansible-playbook -i i ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([WARNING]: Ansi...table directory:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+(/mnt/c/Users/jilop/OneDrive - Universidad Adolfo
+Ibanez/Documents/Universidad/Segundo Ciclo/Tercer Semestre SC/Arquitectura de
+Sistemas/AnsibleArqui/ansible-docker-lab), ignoring it as an ansible.cfg
+source. For more information see
+https://docs.ansible.com/ansible/devel/reference_appendices/config.html#cfg-in-
+world-writable-dir
+
+PLAY [Prueba de rendimiento y estr├®s de Ansible] *******************************
+
+TASK [Gathering Facts] *********************************************************
+ok: [node2]
+ok: [node1]
+ok: [node3]
+
+TASK [Actualizar cache de paquetes] ********************************************
+ok: [node2]
+ok: [node1]
+ok: [node3]
+
+TASK [Instalar paquetes b├ísicos] ***********************************************
+ok: [node2]
+ok: [node1]
+ok: [node3]
+
+TASK [Crear usuario de prueba] *************************************************
+ok: [node1]
+ok: [node2]
+ok: [node3]
+
+TASK [Crear directorio de trabajo] *********************************************
+ok: [node1]
+ok: [node2]
+ok: [node3]
+
+TASK [Crear archivo de prueba] *************************************************
+changed: [node3]
+changed: [node2]
+changed: [node1]
+
+TASK [Ejecutar comando de prueba de CPU] ***************************************
+changed: [node3]
+changed: [node1]
+changed: [node2]
+
+TASK [Mostrar resultado] *******************************************************
+ok: [node1] => {
+    "msg": "Prueba completada en node1"
+}
+ok: [node2] => {
+    "msg": "Prueba completada en node2"
+}
+ok: [node3] => {
+    "msg": "Prueba completada en node3"
+}
+
+PLAY RECAP *********************************************************************
+node1                      : ok=8    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+node2                      : ok=8    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+node3                      : ok=8    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+
+Duracion total: 9.9508128 segundos
+
+PRUEBA CON 10 FORKS:
+----------------------
+wsl : [WARNING]: Ansible is being run in a world writable directory
+En C:\Users\jilop\OneDrive - Universidad Adolfo Ibanez\Documents\Universidad\Segundo Ciclo\Tercer Semestre SC\Arquitectura de Sistemas\AnsibleArqui\ansible-docker-lab\stress_test_simple.ps1: 
+201 Carácter: 23
++ ...   $output = wsl bash -c "cd '$wslProjectDir' && ansible-playbook -i i ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([WARNING]: Ansi...table directory:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+(/mnt/c/Users/jilop/OneDrive - Universidad Adolfo
+Ibanez/Documents/Universidad/Segundo Ciclo/Tercer Semestre SC/Arquitectura de
+Sistemas/AnsibleArqui/ansible-docker-lab), ignoring it as an ansible.cfg
+source. For more information see
+https://docs.ansible.com/ansible/devel/reference_appendices/config.html#cfg-in-
+world-writable-dir
+
+PLAY [Prueba de rendimiento y estr├®s de Ansible] *******************************
+
+TASK [Gathering Facts] *********************************************************
+ok: [node3]
+ok: [node1]
+ok: [node2]
+
+TASK [Actualizar cache de paquetes] ********************************************
+ok: [node2]
+ok: [node1]
+ok: [node3]
+
+TASK [Instalar paquetes b├ísicos] ***********************************************
+ok: [node1]
+ok: [node2]
+ok: [node3]
+
+TASK [Crear usuario de prueba] *************************************************
+ok: [node3]
+ok: [node2]
+ok: [node1]
+
+TASK [Crear directorio de trabajo] *********************************************
+ok: [node3]
+ok: [node1]
+ok: [node2]
+
+TASK [Crear archivo de prueba] *************************************************
+changed: [node2]
+changed: [node1]
+changed: [node3]
+
+TASK [Ejecutar comando de prueba de CPU] ***************************************
+changed: [node3]
+changed: [node1]
+changed: [node2]
+
+TASK [Mostrar resultado] *******************************************************
+ok: [node1] => {
+    "msg": "Prueba completada en node1"
+}
+ok: [node2] => {
+    "msg": "Prueba completada en node2"
+}
+ok: [node3] => {
+    "msg": "Prueba completada en node3"
+}
+
+PLAY RECAP *********************************************************************
+node1                      : ok=8    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+node2                      : ok=8    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+node3                      : ok=8    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+
+Duracion total: 10.0483609 segundos
+

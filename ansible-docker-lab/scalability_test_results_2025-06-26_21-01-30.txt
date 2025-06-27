@@ -1,0 +1,35 @@
+﻿================================
+RESULTADOS DE PRUEBAS DE ESCALABILIDAD
+Fecha: 06/26/2025 21:01:30
+================================
+
+MÃ‰TRICAS DE ESCALABILIDAD:
+----------------------
+Nodos actuales: 3
+LÃ­neas en inventario: 8
+DuraciÃ³n de prueba: 47.9665287 segundos
+
+SALIDA DE PRUEBA:
+----------------------
+ PLAY [Playbook para probar escalabilidad] **************************************  TASK [Gathering Facts] ********************************************************* ok: [node2] ok: [node1] ok: [node3]  TASK [Gathering Facts] ********************************************************* ok: [node1] ok: [node2] ok: [node3]  TASK [Test de escalabilidad - Crear m├║ltiples usuarios] ************************ changed: [node1] => (item=user1) changed: [node2] => (item=user1) changed: [node3] => (item=user1) changed: [node1] => (item=user2) changed: [node2] => (item=user2) changed: [node3] => (item=user2) changed: [node1] => (item=user3) changed: [node2] => (item=user3) changed: [node3] => (item=user3) changed: [node1] => (item=user4) changed: [node2] => (item=user4) changed: [node3] => (item=user4) changed: [node2] => (item=user5) changed: [node1] => (item=user5) changed: [node3] => (item=user5)  TASK [Test de escalabilidad - Crear m├║ltiples directorios] ********************* changed: [node3] => (item=1) changed: [node1] => (item=1) changed: [node2] => (item=1) changed: [node3] => (item=2) changed: [node2] => (item=2) changed: [node1] => (item=2) changed: [node2] => (item=3) changed: [node1] => (item=3) changed: [node3] => (item=3) changed: [node3] => (item=4) changed: [node1] => (item=4) changed: [node2] => (item=4) changed: [node3] => (item=5) changed: [node1] => (item=5) changed: [node2] => (item=5) changed: [node3] => (item=6) changed: [node1] => (item=6) changed: [node2] => (item=6) changed: [node1] => (item=7) changed: [node3] => (item=7) changed: [node2] => (item=7) changed: [node3] => (item=8) changed: [node1] => (item=8) changed: [node2] => (item=8) changed: [node3] => (item=9) changed: [node1] => (item=9) changed: [node2] => (item=9) changed: [node3] => (item=10) changed: [node1] => (item=10) changed: [node2] => (item=10)  TASK [Test de escalabilidad - Instalar m├║ltiples paquetes] ********************* changed: [node3] => (item=tree) changed: [node1] => (item=tree) changed: [node2] => (item=tree) ok: [node2] => (item=wget) ok: [node1] => (item=wget) ok: [node3] => (item=wget) ok: [node2] => (item=git) ok: [node1] => (item=git) ok: [node3] => (item=git) ok: [node2] => (item=vim) ok: [node1] => (item=vim) ok: [node3] => (item=vim) changed: [node2] => (item=unzip) changed: [node1] => (item=unzip) changed: [node3] => (item=unzip)  TASK [Mostrar estad├¡sticas de escalabilidad] *********************************** ok: [node1] => {     "msg": "Usuarios creados: 5\nDirectorios creados: 10\nPaquetes instalados: 5\nTotal de tasks escalables: 20\n" } ok: [node2] => {     "msg": "Usuarios creados: 5\nDirectorios creados: 10\nPaquetes instalados: 5\nTotal de tasks escalables: 20\n" } ok: [node3] => {     "msg": "Usuarios creados: 5\nDirectorios creados: 10\nPaquetes instalados: 5\nTotal de tasks escalables: 20\n" }  PLAY RECAP ********************************************************************* node1                      : ok=6    changed=3    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0    node2                      : ok=6    changed=3    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0    node3                      : ok=6    changed=3    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0    
+
+ANÃLISIS DE ESCALABILIDAD:
+----------------------
+1. Facilidad para aÃ±adir nuevos nodos: Manual (cada nodo requiere entrada individual)
+2. ReutilizaciÃ³n de cÃ³digo: Limitada (playbooks especÃ­ficos)
+3. GestiÃ³n de inventario: EstÃ¡tica (archivo plano)
+
+LIMITACIONES IDENTIFICADAS:
+----------------------
+1. Inventario no dinÃ¡mico
+2. Sin roles reutilizables
+3. ConfiguraciÃ³n manual por nodo
+4. Sin auto-descubrimiento de infraestructura
+
+RECOMENDACIONES:
+----------------------
+1. Implementar inventario dinÃ¡mico
+2. Crear roles modulares y reutilizables
+3. Usar group_vars para configuraciÃ³n por grupos
+4. Implementar auto-scaling con herramientas cloud
+

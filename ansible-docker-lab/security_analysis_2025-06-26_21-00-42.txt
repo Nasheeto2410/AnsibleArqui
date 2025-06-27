@@ -1,0 +1,37 @@
+﻿================================
+ANÃLISIS DE SEGURIDAD
+Fecha: 06/26/2025 21:00:42
+================================
+
+CREDENCIALES EN TEXTO PLANO:
+----------------------
+Encontradas: True
+UbicaciÃ³n: inventory_password.ini
+Contenido: ansible_password=root
+
+RIESGOS IDENTIFICADOS:
+----------------------
+1. Credenciales expuestas en archivos de configuraciÃ³n
+2. Sin cifrado de variables sensibles
+3. Sin uso de ansible-vault
+
+EJEMPLO DE MEJORA:
+----------------------
+# Ejemplo de credencial cifrada con ansible-vault:
+# ansible-vault encrypt_string 'root' --name 'admin_password'
+
+admin_password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          66386439653762373064316463370439323562633637363635303031613761656662636637376361
+          3836666365626462323364663130646562643431316464330a313230633664653761376637643037
+          34636533653030306537363665643838303535613632386534376264646532623665663037356139
+          3264653435646630320a663061393761623536653763366661343762623062313834326636353532
+          3264
+
+RECOMENDACIONES:
+----------------------
+1. Usar ansible-vault para cifrar credenciales
+2. Implementar SSH con claves pÃºblicas/privadas
+3. Usar variables de entorno para datos sensibles
+4. Separar credenciales del cÃ³digo fuente
+

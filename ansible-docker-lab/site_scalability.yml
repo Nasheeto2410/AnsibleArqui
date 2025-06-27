@@ -1,0 +1,53 @@
+---
+- name: Playbook para probar escalabilidad
+  hosts: nodos
+  become: yes
+  vars:
+    users_to_create:
+      - user1
+      - user2
+      - user3
+      - user4
+      - user5
+    
+  tasks:
+    - name: Gathering Facts
+      setup:
+
+    - name: Test de escalabilidad - Crear múltiples usuarios
+      user:
+        name: "{{ item }}"
+        state: present
+        shell: /bin/bash
+        create_home: yes
+      loop: "{{ users_to_create }}"
+      register: user_creation
+
+    - name: Test de escalabilidad - Crear múltiples directorios
+      file:
+        path: "/tmp/test_dir_{{ item }}"
+        state: directory
+        mode: '0755'
+      loop: "{{ range(1, 11) | list }}"  # Crea 10 directorios
+      register: dir_creation
+
+    - name: Test de escalabilidad - Instalar múltiples paquetes
+      apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+      loop:
+        - tree
+        - wget
+        - git
+        - vim
+        - unzip
+      register: package_installation
+
+    - name: Mostrar estadísticas de escalabilidad
+      debug:
+        msg: |
+          Usuarios creados: {{ user_creation.results | length }}
+          Directorios creados: {{ dir_creation.results | length }}
+          Paquetes instalados: {{ package_installation.results | length }}
+          Total de tasks escalables: {{ (user_creation.results | length) + (dir_creation.results | length) + (package_installation.results | length) }}

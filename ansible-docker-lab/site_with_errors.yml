@@ -1,0 +1,35 @@
+---
+- name: Playbook con errores intencionales para testing
+  hosts: nodos
+  become: yes
+  
+  tasks:
+    - name: Gathering Facts
+      setup:
+
+    - name: Intentar instalar paquete inexistente (ERROR INTENCIONAL)
+      apt:
+        name: paquete-que-no-existe-xyz123
+        state: present
+      ignore_errors: yes
+      register: error_test
+
+    - name: Crear directorio con permisos incorrectos (ERROR INTENCIONAL)
+      file:
+        path: /root/test_directory
+        state: directory
+        mode: '999'  # Modo inválido
+      ignore_errors: yes
+      register: permission_error
+
+    - name: Ejecutar comando inexistente (ERROR INTENCIONAL)
+      command: comando_que_no_existe_xyz
+      ignore_errors: yes
+      register: command_error
+
+    - name: Mostrar resultados de tests de errores
+      debug:
+        msg: |
+          Test de paquete inexistente: {{ 'FALLÓ' if error_test.failed else 'PASÓ' }}
+          Test de permisos incorrectos: {{ 'FALLÓ' if permission_error.failed else 'PASÓ' }}
+          Test de comando inexistente: {{ 'FALLÓ' if command_error.failed else 'PASÓ' }}
